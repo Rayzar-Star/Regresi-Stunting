@@ -1,0 +1,373 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import warnings
+warnings.simplefilter('ignore')
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.formula.api import ols
+
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score, cross_validate
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.linear_model import LinearRegression, Lasso, Ridge, ElasticNet
+from sklearn.linear_model import ElasticNetCV
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, mean_absolute_percentage_error
+from sklearn.tree import DecisionTreeClassifier
+
+from sklearn.model_selection import StratifiedKFold, KFold, ShuffleSplit
+from sklearn.model_selection import cross_validate, cross_val_score
+from sklearn.metrics import make_scorer, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import confusion_matrix,ConfusionMatrixDisplay
+from sklearn.feature_selection import RFECV
+import statsmodels.api as sm
+from sklearn.preprocessing import StandardScaler
+
+df=pd.read_excel('Dataset_Stunting.xlsx')
+
+df.info()
+
+df.head(5)
+
+df.corr()
+
+##korelasi=df.corr()
+##xkor=pd.DataFrame(df.corr())
+##kor.to_csv('Korelasi.csv')
+
+plt.figure(figsize=(12,12)) #Mengubah ukuran plot data, kamu bisa mengubah angka dengan nilai berapa saja
+sns.heatmap(df.corr(), #data apa yang ingin dibuat plot, kasus ini akan membuat plot nilai korelasi
+            annot=True, #jika ingin mendapatkan nilai 
+            linewidths=.20, #panjang garis jarak kotak satu ke lainnya
+            fmt = '.2f', #banyaknya angka dibelakang koma
+            cmap='Blues'); #warna maps
+
+df.describe()
+
+df['Kabupaten'].unique()
+
+dkab = df.groupby(['Kabupaten'])
+d_asahan=dkab.get_group('Kabupaten Asahan')
+d_batubara=dkab.get_group('Kabupaten Batubara')
+d_dairi=dkab.get_group('Kabupaten Dairi')
+d_deliserdang=dkab.get_group('Kabupaten Deli Serdang')
+d_humbangh=dkab.get_group('Kabupaten Humbang Hasundutan')
+d_karo=dkab.get_group('Kabupaten Karo')
+d_labuhanbatu=dkab.get_group('Kabupaten Labuhanbatu')
+d_labuhanbatusel=dkab.get_group('Kabupaten Labuhanbatu Selatan')
+d_labuhanbatuuta=dkab.get_group('Kabupaten Labuhanbatu Utara')
+d_langkat=dkab.get_group('Kabupaten Langkat')
+d_mandailing=dkab.get_group('Kabupaten Mandailing Natal')
+d_nias=dkab.get_group('Kabupaten Nias')
+d_niasbar=dkab.get_group('Kabupaten Nias Barat')
+d_niassel=dkab.get_group('Kabupaten Nias Selatan')
+d_niasuta=dkab.get_group('Kabupaten Nias Utara')
+d_padanglawas=dkab.get_group('Kabupaten Padang Lawas')
+d_padanglawasut=dkab.get_group('Kabupaten Padang Lawas Utara')
+d_pakpakbar=dkab.get_group('Kabupaten Pakpak Bharat')
+d_samosir=dkab.get_group('Kabupaten Samosir')
+d_serdangbeda=dkab.get_group('Kabupaten Serdang Bedagai')
+d_simalungun=dkab.get_group('Kabupaten Simalungun')
+d_tapanulisel=dkab.get_group('Kabupaten Tapanuli Selatan')
+d_tapanuliteng=dkab.get_group('Kabupaten Tapanuli Tengah')
+d_tapanuliuta=dkab.get_group('Kabupaten Tapanuli Utara')
+d_tobasamosir=dkab.get_group('Kabupaten Toba Samosir')
+d_binjai=dkab.get_group('Kota Binjai')
+d_gunungsitoli=dkab.get_group('Kota Gunungsitoli')
+d_medan=dkab.get_group('Kota Medan')
+d_padangsidempuan=dkab.get_group('Kota Padangsidempuan')
+d_pematangsiantar=dkab.get_group('Kota Pematangsiantar')
+d_sibolga=dkab.get_group('Kota Sibolga')
+d_tanjungbalai=dkab.get_group('Kota Tanjungbalai')
+d_tebingtinggi=dkab.get_group('Kota Tebing Tinggi')
+
+x_asahan=d_asahan.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_asahan=d_asahan[['Prevelansi Bayi Non Stunting']]
+x_batubara=d_batubara.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_batubara=d_batubara[['Prevelansi Bayi Non Stunting']]
+x_dairi=d_dairi.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_dairi=d_dairi[['Prevelansi Bayi Non Stunting']]
+x_deliserdang=d_deliserdang.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_deliserdang=d_deliserdang[['Prevelansi Bayi Non Stunting']]
+x_humbangh=d_humbangh.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_humbangh=d_humbangh[['Prevelansi Bayi Non Stunting']]
+x_karo=d_karo.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_karo=d_karo[['Prevelansi Bayi Non Stunting']]
+x_labuhanbatu=d_labuhanbatu.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_labuhanbatu=d_labuhanbatu[['Prevelansi Bayi Non Stunting']]
+x_labuhanbatusel=d_labuhanbatusel.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_labuhanbatusel=d_labuhanbatusel[['Prevelansi Bayi Non Stunting']]
+x_labuhanbatuuta=d_labuhanbatuuta.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_labuhanbatuuta=d_labuhanbatuuta[['Prevelansi Bayi Non Stunting']]
+x_langkat=d_langkat.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_langkat=d_langkat[['Prevelansi Bayi Non Stunting']]
+x_mandailing=d_mandailing.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_mandailing=d_mandailing[['Prevelansi Bayi Non Stunting']]
+x_nias=d_nias.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_nias=d_nias[['Prevelansi Bayi Non Stunting']]
+x_niasbar=d_niasbar.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_niasbar=d_niasbar[['Prevelansi Bayi Non Stunting']]
+x_niassel=d_niassel.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_niassel=d_niassel[['Prevelansi Bayi Non Stunting']]
+x_niasuta=d_niasuta.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_niasuta=d_niasuta[['Prevelansi Bayi Non Stunting']]
+x_padanglawas=d_padanglawas.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_padanglawas=d_padanglawas[['Prevelansi Bayi Non Stunting']]
+x_padanglawasut=d_padanglawasut.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_padanglawasut=d_padanglawasut[['Prevelansi Bayi Non Stunting']]
+x_pakpakbar=d_pakpakbar.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_pakpakbar=d_pakpakbar[['Prevelansi Bayi Non Stunting']]
+x_samosir=d_samosir.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_samosir=d_samosir[['Prevelansi Bayi Non Stunting']]
+x_serdangbeda=d_serdangbeda.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_serdangbeda=d_serdangbeda[['Prevelansi Bayi Non Stunting']]
+x_simalungun=d_simalungun.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_simalungun=d_simalungun[['Prevelansi Bayi Non Stunting']]
+x_tapanulisel=d_tapanulisel.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_tapanulisel=d_tapanulisel[['Prevelansi Bayi Non Stunting']]
+x_tapanuliteng=d_tapanulisel.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_tapanuliteng=d_tapanuliteng[['Prevelansi Bayi Non Stunting']]
+x_tapanuliuta=d_tapanuliuta.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_tapanuliuta=d_tapanuliuta[['Prevelansi Bayi Non Stunting']]
+x_tobasamosir=d_tobasamosir.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_tobasamosir=d_tobasamosir[['Prevelansi Bayi Non Stunting']]
+x_binjai=d_binjai.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_binjai=d_binjai[['Prevelansi Bayi Non Stunting']]
+x_gunungsitoli=d_gunungsitoli.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_gunungsitoli=d_gunungsitoli[['Prevelansi Bayi Non Stunting']]
+x_medan=d_medan.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_medan=d_medan[['Prevelansi Bayi Non Stunting']]
+x_padangsidempuan=d_padangsidempuan.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_padangsidempuan=d_padangsidempuan[['Prevelansi Bayi Non Stunting']]
+x_pematangsiantar=d_pematangsiantar.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_pematangsiantar=d_pematangsiantar[['Prevelansi Bayi Non Stunting']]
+x_sibolga=d_sibolga.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_sibolga=d_sibolga[['Prevelansi Bayi Non Stunting']]
+x_tanjungbalai=d_tanjungbalai.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_tanjungbalai=d_tanjungbalai[['Prevelansi Bayi Non Stunting']]
+x_tebingtinggi=d_tebingtinggi.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y_tebingtinggi=d_tebingtinggi[['Prevelansi Bayi Non Stunting']]
+
+lr=LinearRegression()
+
+clf_asahan=lr.fit(x_asahan,y_asahan)
+clf_asahan.coef_
+r_asahan=pd.DataFrame(clf_asahan.coef_)
+r_asahan.to_csv('asahan.csv')
+
+clf_batubara=lr.fit(x_batubara,y_batubara)
+clf_batubara.coef_
+r_batubara=pd.DataFrame(clf_batubara.coef_)
+r_batubara.to_csv('batubara.csv')
+
+clf_dairi=lr.fit(x_dairi,y_dairi)
+clf_dairi.coef_
+r_dairi=pd.DataFrame(clf_dairi.coef_)
+r_dairi.to_csv('dairi.csv')
+
+clf_deliserdang=lr.fit(x_deliserdang,y_deliserdang)
+clf_deliserdang.coef_
+r_deliserdang=pd.DataFrame(clf_deliserdang.coef_)
+r_deliserdang.to_csv('deliserdang.csv')
+
+clf_humbangh=lr.fit(x_humbangh,y_humbangh)
+clf_humbangh.coef_
+r_humbangh=pd.DataFrame(clf_humbangh.coef_)
+r_humbangh.to_csv('humbangh.csv')
+
+clf_karo=lr.fit(x_karo,y_karo)
+clf_karo.coef_
+r_karo=pd.DataFrame(clf_karo.coef_)
+r_karo.to_csv('karo.csv')
+
+clf_labuhanbatu=lr.fit(x_labuhanbatu,y_labuhanbatu)
+clf_labuhanbatu.coef_
+r_labuhanbatu=pd.DataFrame(clf_labuhanbatu.coef_)
+r_labuhanbatu.to_csv('labuhanbatu.csv')
+
+clf_labuhanbatusel=lr.fit(x_labuhanbatusel,y_labuhanbatusel)
+clf_labuhanbatusel.coef_
+r_labuhanbatusel=pd.DataFrame(clf_labuhanbatusel.coef_)
+r_labuhanbatusel.to_csv('labuhanbatusel.csv')
+
+clf_labuhanbatuuta=lr.fit(x_labuhanbatuuta,y_labuhanbatuuta)
+clf_labuhanbatuuta.coef_
+r_labuhanbatuuta=pd.DataFrame(clf_labuhanbatuuta.coef_)
+r_labuhanbatuuta.to_csv('labuhanbatuuta.csv')
+
+clf_langkat=lr.fit(x_langkat,y_langkat)
+clf_langkat.coef_
+r_langkat=pd.DataFrame(clf_langkat.coef_)
+r_langkat.to_csv('langkat.csv')
+
+clf_mandailing=lr.fit(x_mandailing,y_mandailing)
+clf_mandailing.coef_
+r_mandailing=pd.DataFrame(clf_mandailing.coef_)
+r_mandailing.to_csv('mandailing.csv')
+
+clf_nias=lr.fit(x_nias,y_nias)
+clf_nias.coef_
+r_nias=pd.DataFrame(clf_nias.coef_)
+r_nias.to_csv('nias.csv')
+
+clf_niasbar=lr.fit(x_niasbar,y_niasbar)
+clf_niasbar.coef_
+r_niasbar=pd.DataFrame(clf_niasbar.coef_)
+r_niasbar.to_csv('niasbar.csv')
+
+clf_niassel=lr.fit(x_niassel,y_niassel)
+clf_niassel.coef_
+r_niassel=pd.DataFrame(clf_niassel.coef_)
+r_niassel.to_csv('niassel.csv')
+
+clf_niasuta=lr.fit(x_niasuta,y_niasuta)
+clf_niasuta.coef_
+r_niasuta=pd.DataFrame(clf_niasuta.coef_)
+r_niasuta.to_csv('niasuta.csv')
+
+clf_padanglawas=lr.fit(x_padanglawas,y_padanglawas)
+clf_padanglawas.coef_
+r_padanglawas=pd.DataFrame(clf_padanglawas.coef_)
+r_padanglawas.to_csv('padanglawas.csv')
+
+clf_padanglawasut=lr.fit(x_padanglawasut,y_padanglawasut)
+clf_padanglawasut.coef_
+r_padanglawasut=pd.DataFrame(clf_padanglawasut.coef_)
+r_padanglawasut.to_csv('padanglawasut.csv')
+
+clf_pakpakbar=lr.fit(x_pakpakbar,y_pakpakbar)
+clf_pakpakbar.coef_
+r_pakpakbar=pd.DataFrame(clf_pakpakbar.coef_)
+r_pakpakbar.to_csv('pakpakbar.csv')
+
+clf_samosir=lr.fit(x_samosir,y_samosir)
+clf_samosir.coef_
+r_samosir=pd.DataFrame(clf_samosir.coef_)
+r_samosir.to_csv('samosir.csv')
+
+clf_serdangbeda=lr.fit(x_serdangbeda,y_serdangbeda)
+clf_serdangbeda.coef_
+r_serdangbeda=pd.DataFrame(clf_serdangbeda.coef_)
+r_serdangbeda.to_csv('serdangbeda.csv')
+
+clf_simalungun=lr.fit(x_simalungun,y_simalungun)
+clf_simalungun.coef_
+r_simalungun=pd.DataFrame(clf_simalungun.coef_)
+r_simalungun.to_csv('simalungun.csv')
+
+clf_tapanulisel=lr.fit(x_tapanulisel,y_tapanulisel)
+clf_tapanulisel.coef_
+r_tapanulisel=pd.DataFrame(clf_tapanulisel.coef_)
+r_tapanulisel.to_csv('tapanulisel.csv')
+
+clf_tapanuliteng=lr.fit(x_tapanuliteng,y_tapanuliteng)
+clf_tapanuliteng.coef_
+r_tapanuliteng=pd.DataFrame(clf_tapanuliteng.coef_)
+r_tapanuliteng.to_csv('tapanuliteng.csv')
+
+clf_tapanuliuta=lr.fit(x_tapanuliuta,y_tapanuliuta)
+clf_tapanuliuta.coef_
+r_tapanuliuta=pd.DataFrame(clf_tapanuliuta.coef_)
+r_tapanuliuta.to_csv('tapanuliuta.csv')
+
+clf_tobasamosir=lr.fit(x_tobasamosir,y_tobasamosir)
+clf_tobasamosir.coef_
+r_tobasamosir=pd.DataFrame(clf_tobasamosir.coef_)
+r_tobasamosir.to_csv('tobasamosir.csv')
+
+clf_binjai=lr.fit(x_binjai,y_binjai)
+clf_binjai.coef_
+r_binjai=pd.DataFrame(clf_binjai.coef_)
+r_binjai.to_csv('binjai.csv')
+
+clf_gunungsitoli=lr.fit(x_gunungsitoli,y_gunungsitoli)
+clf_gunungsitoli.coef_
+r_gunungsitoli=pd.DataFrame(clf_gunungsitoli.coef_)
+r_gunungsitoli.to_csv('gunungsitoli.csv')
+
+clf_medan=lr.fit(x_medan,y_medan)
+clf_medan.coef_
+r_medan=pd.DataFrame(clf_medan.coef_)
+r_medan.to_csv('medan.csv')
+
+clf_padangsidempuan=lr.fit(x_padangsidempuan,y_padangsidempuan)
+clf_padangsidempuan.coef_
+r_padangsidempuan=pd.DataFrame(clf_padangsidempuan.coef_)
+r_padangsidempuan.to_csv('padangsidempuan.csv')
+
+clf_pematangsiantar=lr.fit(x_pematangsiantar,y_pematangsiantar)
+clf_pematangsiantar.coef_
+r_pematangsiantar=pd.DataFrame(clf_pematangsiantar.coef_)
+r_pematangsiantar.to_csv('pematangsiantar.csv')
+
+clf_sibolga=lr.fit(x_sibolga,y_sibolga)
+clf_sibolga.coef_
+r_sibolga=pd.DataFrame(clf_sibolga.coef_)
+r_sibolga.to_csv('sibolga.csv')
+
+clf_tanjungbalai=lr.fit(x_tanjungbalai,y_tanjungbalai)
+clf_tanjungbalai.coef_
+r_tanjungbalai=pd.DataFrame(clf_tanjungbalai.coef_)
+r_tanjungbalai.to_csv('tanjungbalai.csv')
+
+clf_tebingtinggi=lr.fit(x_tebingtinggi,y_tebingtinggi)
+clf_tebingtinggi.coef_
+r_tebingtinggi=pd.DataFrame(clf_tebingtinggi.coef_)
+r_tebingtinggi.to_csv('tebingtinggi.csv')
+
+x=df.drop(columns=['Prevelansi Bayi Non Stunting','Prevelansi Bayi Stunting','Provinsi','Tahun','Kabupaten'])
+y=df['Prevelansi Bayi Non Stunting']
+
+vif = pd.DataFrame()
+vif["VIF Factor"] = [variance_inflation_factor(x.values, i) for i in range(x.shape[1])]
+vif["features"] = x.columns
+
+vif.round(2)
+
+x_train,x_test,y_train,y_test=train_test_split(x,y, test_size=0.2, random_state=45)
+
+lr= LinearRegression()
+
+rfecv=RFECV(estimator=lr, step=1, scoring='neg_mean_squared_error')
+rfecv.fit(x,y)
+print("Optimum feature : %d" % rfecv.n_features_)
+
+np.absolute(rfecv.estimator_.coef_)
+
+scaler = StandardScaler()
+x_train=scaler.fit_transform(x_train)
+x_test=scaler.fit_transform(x_test)
+
+clf=lr.fit(x_train,y_train)
+
+print("CHI SQUARE",lr.score(x_train,y_train))
+
+predict=clf.predict(x_test)
+print(clf.intercept_)
+print(clf.coef_)
+print("MAE:",mean_absolute_error(y_test,predict))
+print("MSE:",mean_squared_error(y_test,predict,squared=True))
+print("MAPE:",mean_absolute_percentage_error(y_test,predict))
+print("RMSE:",mean_squared_error(y_test,predict,squared=False))
+
+
+folds = KFold(n_splits = 5, shuffle = True, random_state = 100)
+scores = cross_val_score(lr, x, y, scoring='r2', cv=folds)
+scores  
+
+scores = cross_val_score(lr, x, y, scoring='neg_mean_squared_error', cv=5)
+scores
+
+rfecv.ranking_ 
+
+pd.DataFrame(rfecv.support_,index=x.columns,columns=['Rank'])
+
+elast_cv = ElasticNetCV(cv=10, random_state=0)
+elast_cv.fit(x_train, y_train)
+
+y_elastcv_pred = elast_cv.predict(x_train)
+y_elastcv_test = elast_cv.predict(x_test)
+
+print(f"alpha: {elast_cv.alpha_}")
+print("RMSE training:", mean_squared_error(y_train, y_elastcv_pred, squared=False))
+print("RMSE test:", mean_squared_error(y_test, y_elastcv_test, squared=False))
+
